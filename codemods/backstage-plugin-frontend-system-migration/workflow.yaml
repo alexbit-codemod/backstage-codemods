@@ -2,13 +2,28 @@
 
 version: "1"
 
+params:
+  schema:
+    run_ai_followups:
+      name: "Run AI follow-ups"
+      description: "AI-assisted edits for SubPageBlueprint, useRouteRef guards, external route defaults (off by default)."
+      type: boolean
+      default: false
+    update_package_dependencies:
+      name: "Update package.json and lockfile"
+      description: "Remove legacy @backstage/core-* deps and add @backstage/frontend-plugin-api via the package manager (off by default)."
+      type: boolean
+      default: false
+
 nodes:
-  # --- Phase 0: blast radius (metrics only) ---
-  - id: inventory
-    name: Blast radius (metrics only)
+  # All deterministic JSSG phases run as ONE workflow node (multiple steps). Codemod Cloud
+  # may schedule separate automatic nodes concurrently, which triggers parallel git checkouts
+  # on the same repo and fails with `.git/index.lock` conflicts. A single node = one task.
+  - id: deterministic-nfs-migration
+    name: Deterministic NFS migration (metrics + JSSG)
     type: automatic
     steps:
-      - name: Collect migration metrics
+      - name: Blast radius (metrics only)
         js-ast-grep:
           js_file: scripts/inventory.ts
           language: tsx
@@ -18,13 +33,7 @@ nodes:
           exclude:
             - "**/node_modules/**"
 
-  # --- Deterministic JSSG migrations (order matches migration plan) ---
-  - id: migrate-route-refs
-    name: Migrate route refs
-    type: automatic
-    depends_on: [inventory]
-    steps:
-      - name: Route refs to frontend-plugin-api
+      - name: Migrate route refs
         js-ast-grep:
           js_file: scripts/route-refs.ts
           language: tsx
@@ -34,12 +43,7 @@ nodes:
           exclude:
             - "**/node_modules/**"
 
-  - id: migrate-plugin-shell
-    name: createPlugin to createFrontendPlugin
-    type: automatic
-    depends_on: [migrate-route-refs]
-    steps:
-      - name: Plugin shell migration
+      - name: createPlugin to createFrontendPlugin
         js-ast-grep:
           js_file: scripts/plugin-shell.ts
           language: tsx
@@ -49,12 +53,7 @@ nodes:
           exclude:
             - "**/node_modules/**"
 
-  - id: migrate-apis
-    name: ApiBlueprint and createApiRef
-    type: automatic
-    depends_on: [migrate-plugin-shell]
-    steps:
-      - name: API factories and refs
+      - name: ApiBlueprint and createApiRef
         js-ast-grep:
           js_file: scripts/apis.ts
           language: tsx
@@ -64,12 +63,7 @@ nodes:
           exclude:
             - "**/node_modules/**"
 
-  - id: migrate-pages-hooks
-    name: Pure core-plugin-api imports and router metrics
-    type: automatic
-    depends_on: [migrate-apis]
-    steps:
-      - name: Hooks and imports
+      - name: Pure core-plugin-api imports and router metrics
         js-ast-grep:
           js_file: scripts/pages-hooks.ts
           language: tsx
@@ -79,13 +73,14 @@ nodes:
           exclude:
             - "**/node_modules/**"
 
-  # --- AI: tricky / contextual follow-ups (manual gate) ---
-  - id: ai-assisted-followups
-    name: AI-assisted tricky migrations
-    type: manual
-    depends_on: [migrate-pages-hooks]
+  # Optional AI + package steps in ONE node (sequential, single git task). Gated by params (default off).
+  - id: optional-nfs-followups
+    name: Optional AI and package updates
+    type: automatic
+    depends_on: [deterministic-nfs-migration]
     steps:
-      - name: Review SubPageBlueprint, useRouteRef guards, ambiguous routes
+      - name: AI-assisted tricky migrations
+        if: params.run_ai_followups == true
         ai:
           model: "gpt-5.2-codex"
           prompt: |
@@ -98,13 +93,8 @@ nodes:
           system_prompt: |
             You are an expert in Backstage frontend-plugin-api and the extension system.
 
-  # --- Optional: package manager updates lockfile + package.json (run when ready) ---
-  - id: finalize-package-dependencies
-    name: package.json and lockfile (optional)
-    type: manual
-    depends_on: [migrate-pages-hooks]
-    steps:
       - name: Remove legacy core deps and add frontend-plugin-api
+        if: params.update_package_dependencies == true
         run: |
           set -eu
           ROOT="${CODEMOD_TARGET:-${CODEMOD_TARGET_PATH:-.}}"

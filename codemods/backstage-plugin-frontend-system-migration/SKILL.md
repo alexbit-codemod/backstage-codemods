@@ -3,11 +3,10 @@ name: backstage-plugin-frontend-system-migration
 description: >-
   Guides coding agents through the Backstage “new frontend system” (NFS) migration using
   the backstage-plugin-frontend-system-migration codemod: run deterministic JSSG workflow
-  steps for safe refactors (imports, route refs, plugin shell, APIs, hooks), reserve the
-  manual AI workflow node for contextual fixes (SubPageBlueprint, useRouteRef guards,
-  external route defaults), and optionally refresh package.json/lockfiles. Use when
-  migrating from @backstage/core-plugin-api, createPlugin/createRouteRef patterns, or
-  when the user asks about Backstage frontend-plugin-api, NFS migration, or this package’s
+  steps for safe refactors (imports, route refs, plugin shell, APIs, hooks); enable optional
+  AI follow-ups and package.json/lockfile updates via workflow params (off by default).
+  Use when migrating from @backstage/core-plugin-api, createPlugin/createRouteRef patterns,
+  or when the user asks about Backstage frontend-plugin-api, NFS migration, or this package’s
   workflow.
 ---
 
@@ -17,7 +16,7 @@ description: >-
 
 This skill tells agents how to **run and reason about** the **`backstage-plugin-frontend-system-migration`** codemod package: a **workflow-first** migration from legacy `@backstage/core-plugin-api` usage to **`@backstage/frontend-plugin-api`** and the extension-based frontend system.
 
-It does **not** replace reading `workflow.yaml` for exact step IDs; it gives operational rules: **deterministic scripts first**, **AI for tricky follow-ups**, **optional package manager step last**.
+It does **not** replace reading `workflow.yaml` for exact step IDs; it gives operational rules: **deterministic scripts first**, then **optional** AI and package updates controlled by **parameters** (defaults **off**).
 
 ## When to apply this skill
 
@@ -47,56 +46,55 @@ cd /path/to/backstage-plugin-frontend-system-migration
 npx codemod workflow run -w workflow.yaml -t /path/to/backstage-repo
 ```
 
+**Optional steps (off by default)** — pass workflow parameters:
+
+```bash
+npx codemod workflow run -w workflow.yaml -t /path/to/backstage-repo \
+  --param run_ai_followups=true \
+  --param update_package_dependencies=true
+```
+
 **Target directory:** If the shell’s current working directory is not the plugin (or workspace) root the user expects, set:
 
 - `CODEMOD_TARGET` or `CODEMOD_TARGET_PATH` so `run` steps and tooling resolve the correct `package.json`.
 
-**Optional dependency step:** For `finalize-package-dependencies`, if the repo uses **pnpm** or **yarn**, set:
+**Optional package step:** If the repo uses **pnpm** or **yarn**, set:
 
 - `CODEMOD_PACKAGE_MANAGER=pnpm` or `yarn` (default is `npm`).
 
 ## Workflow steps (order matters)
 
-The workflow is defined in **`workflow.yaml`**. Agents should treat steps as follows.
+The workflow is defined in **`workflow.yaml`**. All nodes are **automatic**.
 
-### Phase 1 — Deterministic (automatic) — prefer these for “safe” changes
+### Phase 1 — Deterministic — prefer these for “safe” changes
 
-Run through the pipeline until **`migrate-pages-hooks`** completes. These use **JSSG** (`js-ast-grep`) scripts and are **repeatable, pattern-based** refactors:
+The workflow runs **`deterministic-nfs-migration`** as a **single automatic node** with **five sequential steps** (same JSSG scripts as before). This keeps **one Codemod Cloud task** for the whole phase so the runner does not `git checkout` in parallel on the same repo (which caused `.git/index.lock` errors when each step was a separate node).
 
-| Node ID | Role |
-|--------|------|
-| `inventory` | **Metrics only** (no file edits). Emits `backstage-nfs-migration` with `step=inventory` for blast-radius / risk signals. |
-| `migrate-route-refs` | Route refs and related import moves toward `@backstage/frontend-plugin-api`. |
-| `migrate-plugin-shell` | `createPlugin` → `createFrontendPlugin`, plugin id field, `plugin.ts` → `plugin.tsx` when needed. |
-| `migrate-apis` | `createApiFactory` / `createApiRef` style updates toward NFS APIs. |
-| `migrate-pages-hooks` | Pure import rewrites for selected hooks/API refs; also records router-related signals (`step=pages-hooks`). |
+| Step (order) | Script | Role |
+|--------------|--------|------|
+| 1 | `inventory.ts` | **Metrics only** (no file edits). Emits `backstage-nfs-migration` with `step=inventory`. |
+| 2 | `route-refs.ts` | Route refs and related import moves toward `@backstage/frontend-plugin-api`. |
+| 3 | `plugin-shell.ts` | `createPlugin` → `createFrontendPlugin`, plugin id field, `plugin.ts` → `plugin.tsx` when needed. |
+| 4 | `apis.ts` | `createApiFactory` / `createApiRef` style updates toward NFS APIs. |
+| 5 | `pages-hooks.ts` | Pure import rewrites for selected hooks/API refs; router signals (`step=pages-hooks`). |
 
-**Agent guidance:** After deterministic steps, prefer **running tests and TypeScript checks** in the target repo before editing further by hand. Do not re-implement large refactors manually if the script already covers the pattern—extend the JSSG script or fix edge cases minimally.
+**Agent guidance:** After this node completes, prefer **running tests and TypeScript checks** in the target repo before editing further by hand. Do not re-implement large refactors manually if the script already covers the pattern—extend the JSSG script or fix edge cases minimally.
 
-### Phase 2 — Tricky / contextual — use the **AI** workflow node
+### Phase 2 — Optional — AI and package updates (params, default off)
 
-**Node:** `ai-assisted-followups` (**manual** in the workflow).
+**Node:** `optional-nfs-followups` (**automatic**). It runs **after** `deterministic-nfs-migration` in a **single task** (sequential git). Steps use:
 
-Use this for changes that need **judgment or repo-specific UI structure**, not pure AST substitution, for example:
+- **`if: params.run_ai_followups == true`** — AI-assisted edits for tricky cases (SubPageBlueprint, `useRouteRef` guards, `defaultTarget`, etc.).
+- **`if: params.update_package_dependencies == true`** — remove legacy core deps and add `@backstage/frontend-plugin-api`.
 
-- **Internal `react-router` `Routes` / `Route`** that should become **SubPageBlueprint** tabs (top-level only—scope carefully).
-- **`useRouteRef`** results that need **undefined guards** (especially external route refs).
-- **`createExternalRouteRef`** entries missing **`defaultTarget`** where the product expects it.
+**Defaults:** `run_ai_followups` and `update_package_dependencies` are **false** in `params.schema`. Enable only when the user explicitly wants AI or dependency churn.
 
-The workflow embeds prompts aimed at **minimal edits** using `@backstage/frontend-plugin-api` and `@backstage/ui`.
-
-**Agent guidance:** Apply this skill by **approving/running the manual AI step** in the Codemod workflow when appropriate, or by **mirroring the same priorities** if the user is doing the migration inside the IDE without the CLI: tackle the same bullet list in small, reviewable edits.
-
-### Phase 3 — Optional — package.json and lockfile
-
-**Node:** `finalize-package-dependencies` (**manual**).
-
-Removes legacy **`@backstage/core-plugin-api`** / **`@backstage/core-compat-api`** and adds **`@backstage/frontend-plugin-api`** via the **package manager** (updates lockfile). Only run when the team is ready for dependency churn (CI, install, review).
+**Agent guidance:** For tricky routing and external refs, mirror the **same priorities** as the AI prompt if the user is editing in the IDE without the CLI: small, reviewable edits using `@backstage/frontend-plugin-api` and `@backstage/ui`.
 
 ## Safe vs tricky: decision rule
 
-- **Safe / deterministic:** Single-file or pattern-stable rewrites covered by the JSSG scripts (imports, known call shapes, plugin shell conventions). Use the **automatic** chain first.
-- **Tricky:** Cross-cutting UX/routing, optional chaining for refs, external route wiring, or “how tabs should look” — use **`ai-assisted-followups`** or hand edits with the same checklist as the AI prompt.
+- **Safe / deterministic:** Single-file or pattern-stable rewrites covered by the JSSG scripts (imports, known call shapes, plugin shell conventions). Use Phase 1 first.
+- **Tricky:** Cross-cutting UX/routing, optional chaining for refs, external route wiring — use **`--param run_ai_followups=true`** or hand edits with the same checklist as the AI prompt.
 
 ## Development and validation (for agents editing this package)
 
@@ -107,6 +105,6 @@ npx codemod workflow validate -w workflow.yaml
 
 ## Related files
 
-- `workflow.yaml` — source of truth for node IDs and step types.
+- `workflow.yaml` — source of truth for node IDs, `params`, and step `if` conditions.
 - `codemod.yaml` — package metadata for the Codemod registry.
 - `scripts/*.ts` — JSSG transforms per phase.
