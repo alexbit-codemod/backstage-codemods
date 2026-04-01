@@ -2,9 +2,10 @@
 name: backstage-plugin-frontend-system-migration
 description: >-
   Guides coding agents through the Backstage “new frontend system” (NFS) migration using
-  the backstage-plugin-frontend-system-migration codemod: one workflow node runs JSSG steps
-  in order (blast-radius metrics → route refs → plugin shell on plugin files only → APIs →
-  pure hook imports + router metrics), then optional AI and package.json/lockfile steps at
+  the backstage-plugin-frontend-system-migration codemod: one workflow node runs a single
+  unified JSSG transform (`scripts/unified.ts`) that chains blast-radius metrics → route refs
+  → plugin shell → APIs → pure hook imports + router metrics, then optional AI and
+  package.json/lockfile steps at
   the end of the same node, gated by workflow params (off by default). Use when migrating from
   @backstage/core-plugin-api, createPlugin/createRouteRef patterns, or when the user asks
   about Backstage frontend-plugin-api, NFS migration, or this package’s workflow.
@@ -70,25 +71,25 @@ One **automatic** node (`deterministic-nfs-migration`): a **single task** (seque
 
 | Node ID | Purpose |
 |---------|---------|
-| `deterministic-nfs-migration` | Sequential JSSG: metrics → route refs → plugin shell → APIs → pages/hooks (see table below), then optional AI and/or package steps when enabled. |
+| `deterministic-nfs-migration` | One **js-ast-grep** step (`scripts/unified.ts` on `**/*.ts` / `**/*.tsx`), then optional AI and/or package steps when enabled. |
 
 ### Deterministic phase — step order and behavior
 
-All steps use **js-ast-grep** with `language: tsx`. Glob scopes differ per step (see `workflow.yaml`).
+The workflow runs **`scripts/unified.ts`** once per file (`language: tsx`). That module chains the phase scripts below **in this order**. After each phase returns new source from `commitEdits`, unified **re-parses** so the next phase sees an up-to-date AST (required for correctness). Re-parsed trees report `filename() === "anonymous"`; unified injects the real path through transform **`params["codemod.filename"]`**, and **`effectiveFilename`** in `scripts/lib/effective-filename.ts` restores it for metrics and `plugin.ts` → `plugin.tsx` rename logic.
 
-| Order | Workflow step name | Script | Scope (include) | Role |
-|------:|--------------------|--------|-----------------|------|
-| 1 | Blast radius (metrics only) | `scripts/inventory.ts` | `**/*.ts`, `**/*.tsx` | **No file edits.** Increments metric `backstage-nfs-migration` with `step=inventory` for patterns such as `@backstage/core-plugin-api` imports, `createPlugin`, routable extensions, `createApiFactory`, route ref helpers, `useRouteRef`, `bindRoutes`, internal `Route`/`Routes` usage, alpha entry files, etc., each tagged with risk (`safe` / `medium` / `tricky`). |
-| 2 | Migrate route refs | `scripts/route-refs.ts` | `**/*.ts`, `**/*.tsx` | Moves `createRouteRef` / `createSubRouteRef` / `createExternalRouteRef` imports toward `@backstage/frontend-plugin-api` (splitting imports from `@backstage/core-plugin-api` when needed). Applies path/default tweaks (e.g. known external route ids → `defaultTarget` via `EXTERNAL_ROUTE_DEFAULT_TARGETS` in `scripts/lib/constants.ts`). Uses `@jssg/utils` for import edits. |
-| 3 | createPlugin to createFrontendPlugin | `scripts/plugin-shell.ts` | **`**/plugin.ts`**, **`**/plugin.tsx`** only | `createPlugin` → `createFrontendPlugin`, import updates, renames the options object key `id` → `pluginId`. If the file is `plugin.ts` and contains JSX, renames the file to `plugin.tsx`. |
-| 4 | ApiBlueprint and createApiRef | `scripts/apis.ts` | `**/*.ts`, `**/*.tsx` | Migrates `createApiFactory` usage toward NFS `ApiBlueprint` patterns and related `createApiRef` handling (when the legacy import shape matches). |
-| 5 | Pure core-plugin-api imports and router metrics | `scripts/pages-hooks.ts` | `**/*.ts`, `**/*.tsx` | **Edits:** rewrites import statements that import **only** a fixed whitelist of symbols (`useApi`, `useRouteRef`, `configApiRef`, `discoveryApiRef`, `fetchApiRef`, `identityApiRef`, `storageApiRef`, `analyticsApiRef`) from `@backstage/core-plugin-api` to `@backstage/frontend-plugin-api`. **Metrics (no edit):** if a member `.Routes` call is present, increments `backstage-nfs-migration` with `step=pages-hooks`, pattern `Routes-internal-router`, risk `tricky` (signals internal react-router usage that may need `SubPageBlueprint` work). |
+| Order | Phase script | Role |
+|------:|--------------|------|
+| 1 | `scripts/inventory.ts` | **No file edits.** Increments metric `backstage-nfs-migration` with `step=inventory` for patterns such as `@backstage/core-plugin-api` imports, `createPlugin`, routable extensions, `createApiFactory`, route ref helpers, `useRouteRef`, `bindRoutes`, internal `Route`/`Routes` usage, alpha entry files, etc., each tagged with risk (`safe` / `medium` / `tricky`). |
+| 2 | `scripts/route-refs.ts` | Moves `createRouteRef` / `createSubRouteRef` / `createExternalRouteRef` imports toward `@backstage/frontend-plugin-api` (splitting imports from `@backstage/core-plugin-api` when needed). Applies path/default tweaks (e.g. known external route ids → `defaultTarget` via `EXTERNAL_ROUTE_DEFAULT_TARGETS` in `scripts/lib/constants.ts`). Uses `@jssg/utils` for import edits. |
+| 3 | `scripts/plugin-shell.ts` | `createPlugin` → `createFrontendPlugin`, import updates, renames the options object key `id` → `pluginId`. If the file is `plugin.ts` and contains JSX, renames the file to `plugin.tsx`. (No-op on files without `createPlugin` / plugin patterns.) |
+| 4 | `scripts/apis.ts` | Migrates `createApiFactory` usage toward NFS `ApiBlueprint` patterns and related `createApiRef` handling (when the legacy import shape matches). |
+| 5 | `scripts/pages-hooks.ts` | **Edits:** rewrites import statements that import **only** a fixed whitelist of symbols (`useApi`, `useRouteRef`, `configApiRef`, `discoveryApiRef`, `fetchApiRef`, `identityApiRef`, `storageApiRef`, `analyticsApiRef`) from `@backstage/core-plugin-api` to `@backstage/frontend-plugin-api`. **Metrics (no edit):** if a member `.Routes` call is present, increments `backstage-nfs-migration` with `step=pages-hooks`, pattern `Routes-internal-router`, risk `tricky` (signals internal react-router usage that may need `SubPageBlueprint` work). |
 
 **Agent guidance:** After `deterministic-nfs-migration` completes, prefer **running tests and TypeScript checks** in the target repo before editing further by hand. Do not re-implement large refactors manually if the script already covers the pattern—extend the JSSG script or fix edge cases minimally.
 
 ### Optional phase — AI and package updates (params, default off)
 
-**Same node** as the deterministic steps (**last two steps** in `deterministic-nfs-migration`).
+**Same node** as the JSSG step (**last two steps** after `NFS migration (unified JSSG)` in `deterministic-nfs-migration`).
 
 - **`if: params.run_ai_followups == true`** — AI-assisted edits (model in `workflow.yaml`) for remaining legacy patterns: internal `Routes`/`Route` → `SubPageBlueprint` (top-level tabs), `useRouteRef` undefined guards, `createExternalRouteRef` missing `defaultTarget`. Uses `@backstage/frontend-plugin-api` and `@backstage/ui`.
 - **`if: params.update_package_dependencies == true`** — shell step: `cd` to `CODEMOD_TARGET` / `CODEMOD_TARGET_PATH` / `.`, then package-manager remove/add as above.
@@ -111,6 +112,6 @@ npx codemod workflow validate -w workflow.yaml
 
 ## Related files
 
-- `workflow.yaml` — node IDs, `params`, step `if` conditions, `include`/`exclude` globs, and AI prompt text.
+- `workflow.yaml` — node IDs, `params`, step `if` conditions, unified JSSG `include`/`exclude` globs, and AI prompt text.
 - `codemod.yaml` — package metadata for the Codemod registry (`name`, `version`, `description`, `workflow` path).
-- `scripts/*.ts` — JSSG transforms per step; `scripts/lib/constants.ts` (metric name, package names, external route defaults), `scripts/lib/route-ref-ast.ts` (route ref helpers).
+- `scripts/*.ts` — JSSG transforms per phase; `scripts/unified.ts` (orchestration); `scripts/lib/constants.ts`, `scripts/lib/route-ref-ast.ts`, `scripts/lib/reparse-root.ts`, `scripts/lib/effective-filename.ts`.

@@ -2,6 +2,11 @@
 # yarn lockfile v1
 
 
+"@codemod.com/cli-darwin-arm64@1.7.11":
+  version "1.7.11"
+  resolved "https://registry.npmjs.org/@codemod.com/cli-darwin-arm64/-/cli-darwin-arm64-1.7.11.tgz"
+  integrity sha512-dE/cjW0sT5YKR0jwGH0jr17zV3vtBA53vpWObhgK6mBWRPgBrN5bSdYgldLIcleUHkfQiydRu4n+qZdz9FOtgQ==
+
 "@codemod.com/jssg-types@latest":
   version "1.5.1"
   resolved "https://registry.npmjs.org/@codemod.com/jssg-types/-/jssg-types-1.5.1.tgz"
@@ -17,6 +22,24 @@
   resolved "file:codemods/backstage-plugin-frontend-system-migration"
   dependencies:
     "@jssg/utils" latest
+
+codemod@^1.7.11:
+  version "1.7.11"
+  resolved "https://registry.npmjs.org/codemod/-/codemod-1.7.11.tgz"
+  integrity sha512-rfbd5HWUugz+27+YJUZ7tqRWVkKhKl+Gtab7L3Oq/9AJvFOFpONEKju6Jkv9UJDWSKwpWjAZ9xupb3MzHxxsRg==
+  dependencies:
+    detect-libc "^2.0.3"
+  optionalDependencies:
+    "@codemod.com/cli-darwin-arm64" "1.7.11"
+    "@codemod.com/cli-darwin-x64" "1.7.11"
+    "@codemod.com/cli-linux-arm64-gnu" "1.7.11"
+    "@codemod.com/cli-linux-x64-gnu" "1.7.11"
+    "@codemod.com/cli-win32-x64-msvc" "1.7.11"
+
+detect-libc@^2.0.3:
+  version "2.1.2"
+  resolved "https://registry.npmjs.org/detect-libc/-/detect-libc-2.1.2.tgz"
+  integrity sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==
 
 typescript@latest:
   version "6.0.2"

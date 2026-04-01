@@ -2,6 +2,7 @@ import type { Edit, SgNode, Transform } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { addImport, getImport, removeImport } from "@jssg/utils/javascript/imports";
 import { CORE_PLUGIN_API, FRONTEND_PLUGIN_API } from "./lib/constants.ts";
+import { effectiveFilename } from "./lib/effective-filename.ts";
 import type { TsProgramRoot } from "./lib/ts-program.ts";
 
 function getImportedNames(stmt: SgNode<TSX>): string[] {
@@ -81,8 +82,9 @@ function pluginIdPairEdits(obj: SgNode<TSX>): Edit[] {
   return out;
 }
 
-const transform: Transform<TSX> = async (root) => {
+const transform: Transform<TSX> = async (root, options) => {
   const rootNode = root.root();
+  const filePath = effectiveFilename(root, options);
   const edits: Edit[] = [];
 
   edits.push(...ensureCreateFrontendPluginImport(rootNode));
@@ -117,8 +119,8 @@ const transform: Transform<TSX> = async (root) => {
   const hasJsx =
     rootNode.find({ rule: { kind: "jsx_element" } }) ||
     rootNode.find({ rule: { kind: "jsx_self_closing_element" } });
-  if (root.filename().endsWith("plugin.ts") && hasJsx) {
-    root.rename(root.filename().replace(/plugin\.ts$/, "plugin.tsx"));
+  if (filePath.endsWith("plugin.ts") && hasJsx) {
+    root.rename(filePath.replace(/plugin\.ts$/, "plugin.tsx"));
   }
 
   if (edits.length === 0) {

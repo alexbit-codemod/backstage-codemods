@@ -2,6 +2,7 @@ import type { Transform } from "codemod:ast-grep";
 import type TSX from "codemod:ast-grep/langs/tsx";
 import { useMetricAtom } from "codemod:metrics";
 import { CORE_PLUGIN_API, NFS_MIGRATION_METRIC } from "./lib/constants.ts";
+import { effectiveFilename } from "./lib/effective-filename.ts";
 
 const nfsMigration = useMetricAtom(NFS_MIGRATION_METRIC);
 
@@ -13,9 +14,9 @@ function record(
   nfsMigration.increment({ step: "inventory", pattern, risk, file });
 }
 
-const transform: Transform<TSX> = async (root) => {
+const transform: Transform<TSX> = async (root, options) => {
   const rootNode = root.root();
-  const file = root.filename();
+  const file = effectiveFilename(root, options);
 
   const importStmts = rootNode.findAll({
     rule: { kind: "import_statement" },

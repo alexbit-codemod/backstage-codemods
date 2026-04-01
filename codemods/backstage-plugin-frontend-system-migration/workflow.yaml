@@ -16,56 +16,16 @@ params:
       default: false
 
 nodes:
-  # All JSSG phases plus optional AI/package steps run as ONE workflow node (multiple steps).
-  # Codemod Cloud may schedule separate automatic nodes concurrently, which triggers parallel
-  # git checkouts on the same repo and fails with `.git/index.lock` conflicts. A single node = one task.
+  # Deterministic JSSG runs as one js-ast-grep step (`scripts/unified.ts` chains inventory →
+  # route-refs → plugin-shell → apis → pages-hooks). Optional AI/package follow the same node.
+  # Codemod Cloud: one automatic node = one task (avoids parallel `.git/index.lock` conflicts).
   - id: deterministic-nfs-migration
     name: NFS migration (metrics + JSSG + optional follow-ups)
     type: automatic
     steps:
-      - name: Blast radius (metrics only)
+      - name: NFS migration (unified JSSG)
         js-ast-grep:
-          js_file: scripts/inventory.ts
-          language: tsx
-          include:
-            - "**/*.ts"
-            - "**/*.tsx"
-          exclude:
-            - "**/node_modules/**"
-
-      - name: Migrate route refs
-        js-ast-grep:
-          js_file: scripts/route-refs.ts
-          language: tsx
-          include:
-            - "**/*.ts"
-            - "**/*.tsx"
-          exclude:
-            - "**/node_modules/**"
-
-      - name: createPlugin to createFrontendPlugin
-        js-ast-grep:
-          js_file: scripts/plugin-shell.ts
-          language: tsx
-          include:
-            - "**/plugin.ts"
-            - "**/plugin.tsx"
-          exclude:
-            - "**/node_modules/**"
-
-      - name: ApiBlueprint and createApiRef
-        js-ast-grep:
-          js_file: scripts/apis.ts
-          language: tsx
-          include:
-            - "**/*.ts"
-            - "**/*.tsx"
-          exclude:
-            - "**/node_modules/**"
-
-      - name: Pure core-plugin-api imports and router metrics
-        js-ast-grep:
-          js_file: scripts/pages-hooks.ts
+          js_file: scripts/unified.ts
           language: tsx
           include:
             - "**/*.ts"

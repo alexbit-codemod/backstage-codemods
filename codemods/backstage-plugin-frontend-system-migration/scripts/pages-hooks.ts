@@ -6,6 +6,7 @@ import {
   FRONTEND_PLUGIN_API,
   NFS_MIGRATION_METRIC,
 } from "./lib/constants.ts";
+import { effectiveFilename } from "./lib/effective-filename.ts";
 import type { TsProgramRoot } from "./lib/ts-program.ts";
 
 /** Symbols that map 1:1 from core-plugin-api to frontend-plugin-api (import path only). */
@@ -81,9 +82,9 @@ function flagInternalRouters(rootNode: TsProgramRoot, file: string): void {
   }
 }
 
-const transform: Transform<TSX> = async (root) => {
+const transform: Transform<TSX> = async (root, options) => {
   const rootNode = root.root();
-  const file = root.filename();
+  const file = effectiveFilename(root, options);
   const edits: Edit[] = [];
 
   edits.push(...migratePureCoreImports(rootNode));

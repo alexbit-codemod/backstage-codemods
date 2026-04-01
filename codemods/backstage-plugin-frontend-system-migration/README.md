@@ -8,7 +8,7 @@ Everything lives in **[workflow.yaml](workflow.yaml)**. The workflow has **one a
 
 | Step group | Purpose |
 |------------|---------|
-| **Deterministic JSSG** (always) | inventory metrics → route refs → plugin shell → APIs → pages/hooks (`inventory.ts` → … → `pages-hooks.ts`). |
+| **Deterministic JSSG** (always) | One **js-ast-grep** step: [`scripts/unified.ts`](scripts/unified.ts) runs metrics → route refs → plugin shell → APIs → pages/hooks in order (implemented in `inventory.ts` … `pages-hooks.ts`). |
 | **Optional** (last two steps) | **AI** and/or **package.json + lockfile** updates, gated by [parameters](#parameters) (both **off by default**). |
 
 ## Parameters
@@ -41,6 +41,7 @@ npx codemod workflow run -w workflow.yaml -t /path/to/repo \
 
 ## Scripts
 
+- `scripts/unified.ts` — **workflow entrypoint**; runs each phase in order, re-parses after each `commitEdits` result, and passes the real file path via transform `params` when `filename()` is `anonymous` (see `scripts/lib/effective-filename.ts`)
 - `scripts/inventory.ts` — metrics: `backstage-nfs-migration` with `step=inventory` (patterns and risk: safe / medium / tricky)
 - `scripts/route-refs.ts` — route refs (uses `@jssg/utils` for imports)
 - `scripts/plugin-shell.ts` — plugin shell + optional `plugin.ts` → `plugin.tsx`
@@ -57,6 +58,8 @@ See **[SKILL.md](SKILL.md)** for when to use this migration, how to run the work
 npm test
 npx codemod workflow validate -w workflow.yaml
 ```
+
+`npm test` runs JSSG tests: `tests/inventory` uses `scripts/inventory.ts` alone (metrics-only expectations); other suites use `scripts/unified.ts` to match the workflow.
 
 ## License
 

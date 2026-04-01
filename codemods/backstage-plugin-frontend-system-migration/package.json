@@ -4,7 +4,7 @@
   "description": "Migrates Backstage plugins from the legacy architecture to the new frontend system using the extension-based model.",
   "type": "module",
   "scripts": {
-    "test": "npx codemod@latest jssg test -l tsx ./scripts/inventory.ts ./tests/inventory && npx codemod@latest jssg test -l tsx ./scripts/route-refs.ts ./tests/route-refs && npx codemod@latest jssg test -l tsx ./scripts/plugin-shell.ts ./tests/plugin-shell && npx codemod@latest jssg test -l tsx ./scripts/apis.ts ./tests/apis && npx codemod@latest jssg test -l tsx ./scripts/pages-hooks.ts ./tests/pages-hooks && npx codemod@latest workflow validate -w workflow.yaml",
+    "test": "npx codemod@latest jssg test -l tsx ./scripts/inventory.ts ./tests/inventory && npx codemod@latest jssg test -l tsx ./scripts/unified.ts ./tests/route-refs && npx codemod@latest jssg test -l tsx ./scripts/unified.ts ./tests/plugin-shell && npx codemod@latest jssg test -l tsx ./scripts/unified.ts ./tests/apis && npx codemod@latest jssg test -l tsx ./scripts/unified.ts ./tests/pages-hooks && npx codemod@latest workflow validate -w workflow.yaml",
     "test:inventory": "npx codemod@latest jssg test -l tsx ./scripts/inventory.ts ./tests/inventory"
   },
   "dependencies": {

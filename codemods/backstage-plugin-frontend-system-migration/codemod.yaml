@@ -1,8 +1,8 @@
 schema_version: "1.0"
 
 name: "backstage-plugin-frontend-system-migration"
-version: "0.1.3"
-description: "Migrate Backstage frontend plugins from the legacy core-plugin-api model to the new frontend system (frontend-plugin-api): route refs, plugin shell, APIs, page hooks, blast-radius metrics; optional AI and package.json/lockfile steps in the same workflow node, gated by params (off by default)."
+version: "0.1.5"
+description: "Migrate Backstage frontend plugins from the legacy core-plugin-api model to the new frontend system (frontend-plugin-api): one unified JSSG step (scripts/unified.ts chains metrics, route refs, plugin shell, APIs, page hooks); optional AI and package.json/lockfile steps in the same workflow node, gated by params (off by default)."
 author: "Alex Bit <alex@codemod.com>"
 license: "MIT"
 workflow: "workflow.yaml"

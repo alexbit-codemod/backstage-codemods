@@ -1,0 +1,13 @@
+{
+  "backstage-nfs-migration": [
+    {
+      "cardinality": {
+        "file": "/Users/alexbit/Documents/Playground/backstage-codemods/codemods/backstage-plugin-frontend-system-migration/tests/pages-hooks/pure-imports/input.ts",
+        "pattern": "import-core-plugin-api",
+        "risk": "safe",
+        "step": "inventory"
+      },
+      "count": 1
+    }
+  ]
+}

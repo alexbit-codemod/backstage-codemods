@@ -1,0 +1,31 @@
+{
+  "backstage-nfs-migration": [
+    {
+      "cardinality": {
+        "file": "/Users/alexbit/Documents/Playground/backstage-codemods/codemods/backstage-plugin-frontend-system-migration/tests/route-refs/routes/input.ts",
+        "pattern": "createExternalRouteRef",
+        "risk": "tricky",
+        "step": "inventory"
+      },
+      "count": 1
+    },
+    {
+      "cardinality": {
+        "file": "/Users/alexbit/Documents/Playground/backstage-codemods/codemods/backstage-plugin-frontend-system-migration/tests/route-refs/routes/input.ts",
+        "pattern": "createRouteRef-with-id",
+        "risk": "safe",
+        "step": "inventory"
+      },
+      "count": 1
+    },
+    {
+      "cardinality": {
+        "file": "/Users/alexbit/Documents/Playground/backstage-codemods/codemods/backstage-plugin-frontend-system-migration/tests/route-refs/routes/input.ts",
+        "pattern": "import-core-plugin-api",
+        "risk": "safe",
+        "step": "inventory"
+      },
+      "count": 1
+    }
+  ]
+}
