@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "backstage-plugin-frontend-system-migration"
-version: "0.1.1"
+version: "0.1.2"
 description: "Migrate Backstage frontend plugins from the legacy core-plugin-api model to the new frontend system (frontend-plugin-api): route refs, plugin shell, APIs, page hooks, blast-radius metrics; optional AI and package.json/lockfile updates via workflow params (off by default)."
 author: "Alex Bit <alex@codemod.com>"
 license: "MIT"
