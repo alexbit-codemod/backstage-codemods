@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "skipLibCheck": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "types": ["@codemod.com/jssg-types"],
@@ -13,5 +14,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true
   },
-  "exclude": ["tests"]
+  "include": ["scripts/**/*.ts"],
+  "exclude": ["tests", "node_modules"]
 }

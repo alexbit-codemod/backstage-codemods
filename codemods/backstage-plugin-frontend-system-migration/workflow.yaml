@@ -3,11 +3,80 @@
 version: "1"
 
 nodes:
-  - id: apply-transforms
-    name: Apply AST Transformations
+  - id: inventory
+    name: Blast radius (metrics only)
     type: automatic
     steps:
-      - name: "Scan typescript files and apply fixes"
+      - name: Collect migration metrics
         js-ast-grep:
-          js_file: scripts/codemod.ts
-          language: "typescript"
+          js_file: scripts/inventory.ts
+          language: tsx
+          include:
+            - "**/*.ts"
+            - "**/*.tsx"
+          exclude:
+            - "**/node_modules/**"
+
+  - id: migrate-route-refs
+    name: Migrate route refs
+    type: automatic
+    depends_on: [inventory]
+    steps:
+      - name: Route refs to frontend-plugin-api
+        js-ast-grep:
+          js_file: scripts/route-refs.ts
+          language: tsx
+          semantic_analysis: workspace
+          include:
+            - "**/*.ts"
+            - "**/*.tsx"
+          exclude:
+            - "**/node_modules/**"
+
+  - id: migrate-plugin-shell
+    name: createPlugin to createFrontendPlugin
+    type: automatic
+    depends_on: [migrate-route-refs]
+    steps:
+      - name: Plugin shell migration
+        js-ast-grep:
+          js_file: scripts/plugin-shell.ts
+          language: tsx
+          semantic_analysis: workspace
+          include:
+            - "**/plugin.ts"
+            - "**/plugin.tsx"
+          exclude:
+            - "**/node_modules/**"
+
+  - id: migrate-apis
+    name: ApiBlueprint and createApiRef
+    type: automatic
+    depends_on: [migrate-plugin-shell]
+    steps:
+      - name: API factories and refs
+        js-ast-grep:
+          js_file: scripts/apis.ts
+          language: tsx
+          semantic_analysis: workspace
+          include:
+            - "**/*.ts"
+            - "**/*.tsx"
+          exclude:
+            - "**/node_modules/**"
+
+  - id: migrate-pages-hooks
+    name: Pure core-plugin-api imports and router metrics
+    type: automatic
+    depends_on: [migrate-apis]
+    steps:
+      - name: Hooks and imports
+        js-ast-grep:
+          js_file: scripts/pages-hooks.ts
+          language: tsx
+          include:
+            - "**/*.ts"
+            - "**/*.tsx"
+          exclude:
+            - "**/node_modules/**"
+

@@ -9,7 +9,7 @@ workflow: "workflow.yaml"
 repository: "https://github.com/alexbit-codemod/backstage-codemods"
 
 targets:
-  languages: ["typescript"]
+  languages: ["typescript", "tsx"]
 
 keywords: ["transformation", "migration"]
 

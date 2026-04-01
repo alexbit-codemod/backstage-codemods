@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/codemod/codemod/refs/heads/main/schemas/workflow.json
+
+version: "1"
+
+nodes:
+  - id: inventory
+    name: Blast radius (metrics only)
+    type: automatic
+    steps:
+      - name: Collect migration metrics
+        js-ast-grep:
+          js_file: scripts/inventory.ts
+          language: tsx
+          include:
+            - "**/*.ts"
+            - "**/*.tsx"
+          exclude:
+            - "**/node_modules/**"

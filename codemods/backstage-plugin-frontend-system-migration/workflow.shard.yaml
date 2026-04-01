@@ -1,0 +1,43 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/codemod/codemod/refs/heads/main/schemas/workflow.json
+# Optional: split large monorepo migrations into PR-sized shards (requires shard-capable runner).
+
+version: "1"
+
+state:
+  schema:
+    shards:
+      type: array
+      items:
+        type: object
+
+nodes:
+  - id: evaluate-shards
+    name: Evaluate shards
+    type: automatic
+    steps:
+      - name: Build shards from files touched by route-refs
+        shard:
+          method:
+            type: directory
+            max_files_per_shard: 20
+          target: "./plugins"
+          output_state: shards
+          js-ast-grep:
+            js_file: scripts/route-refs.ts
+            language: tsx
+            include:
+              - "**/*.{ts,tsx}"
+
+  - id: apply-transforms
+    name: Apply NFS migration per shard
+    type: automatic
+    depends_on: [evaluate-shards]
+    strategy:
+      type: matrix
+      from_state: shards
+    steps:
+      - name: Run route refs migration
+        js-ast-grep:
+          js_file: scripts/route-refs.ts
+          language: tsx
+          semantic_analysis: workspace

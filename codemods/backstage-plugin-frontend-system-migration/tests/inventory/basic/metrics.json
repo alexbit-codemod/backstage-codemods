@@ -1,0 +1,12 @@
+{
+  "backstage-nfs-blast-radius": [
+    {
+      "cardinality": {
+        "file": "/Users/alexbit/Documents/Playground/backstage-codemods/codemods/backstage-plugin-frontend-system-migration/tests/inventory/basic/input.ts",
+        "pattern": "import-core-plugin-api",
+        "risk": "safe"
+      },
+      "count": 1
+    }
+  ]
+}

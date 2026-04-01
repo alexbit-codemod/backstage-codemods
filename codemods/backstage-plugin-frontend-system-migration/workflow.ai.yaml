@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/codemod/codemod/refs/heads/main/schemas/workflow.json
+# Optional AI follow-up for SubPageBlueprint, useRouteRef guards, and ambiguous external routes.
+# Set LLM_API_KEY or use printed [AI INSTRUCTIONS] with a coding agent.
+# Usage: codemod workflow run -w workflow.ai.yaml -t /path/to/repo
+
+version: "1"
+
+nodes:
+  - id: ai-assisted-followups
+    name: AI-assisted tricky migrations
+    type: manual
+    steps:
+      - name: Review SubPageBlueprint and useRouteRef guards
+        ai:
+          model: "gpt-5.2-codex"
+          prompt: |
+            You are migrating a Backstage plugin to the new frontend system (NFS).
+            Focus on files that still use legacy patterns after deterministic codemods:
+            - Internal react-router Routes/Route that should become SubPageBlueprint tabs (top-level tabs only).
+            - useRouteRef results that need undefined guards for external route refs.
+            - createExternalRouteRef entries missing defaultTarget.
+            Apply minimal edits using @backstage/frontend-plugin-api and @backstage/ui.
+          system_prompt: |
+            You are an expert in Backstage frontend-plugin-api and the extension system.

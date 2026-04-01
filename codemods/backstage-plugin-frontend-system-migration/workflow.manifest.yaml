@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/codemod/codemod/refs/heads/main/schemas/workflow.json
+# Run after workflow.yaml: updates package.json (removes @backstage/core-plugin-api, adds frontend-plugin-api).
+# Usage: codemod workflow run -w workflow.manifest.yaml -t /path/to/plugin-package
+
+version: "1"
+
+nodes:
+  - id: package-manifest
+    name: package.json dependencies
+    type: automatic
+    steps:
+      - name: Remove core-plugin-api deps
+        command: |
+          node ./scripts/package-manifest.mjs
