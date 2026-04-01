@@ -1,0 +1,8 @@
+{
+  "name": "backstage-plugin-frontend-system-migration-workspace",
+  "private": true,
+  "description": "Monorepo workspace for codemods",
+  "workspaces": [
+    "codemods/*"
+  ]
+}

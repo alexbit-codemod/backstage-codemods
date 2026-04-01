@@ -1,0 +1,14 @@
+{
+  "name": "backstage-plugin-frontend-system-migration",
+  "version": "0.1.0",
+  "description": "Migrates Backstage plugins from the legacy architecture to the new frontend system using the extension-based model.",
+  "type": "module",
+  "scripts": {
+    "test": "yarn dlx codemod@latest jssg test -l typescript ./scripts/codemod.ts",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@codemod.com/jssg-types": "latest",
+    "typescript": "latest"
+  }
+}
